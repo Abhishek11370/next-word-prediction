@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-streamlit==1.60.0
+﻿streamlit==1.60.0
 tensorflow==2.19.0
 numpy==1.26.4
 h5py
-=======
-﻿streamlit
-tensorflow==2.15.0
-numpy
->>>>>>> cb6b1051 (Initial Commit)
