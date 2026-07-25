@@ -1,73 +1,147 @@
 import streamlit as st
 import pickle
 import numpy as np
+import os
 
-try:
-    from tensorflow.keras.models import load_model
-    from tensorflow.keras.preprocessing.sequence import pad_sequences
-    TF_AVAILABLE = True
-except ModuleNotFoundError:
-    TF_AVAILABLE = False
-
-st.set_page_config(page_title="Next Word Prediction", layout="centered")
-
-st.title("🧠 Next Word Prediction (LSTM)")
-
-if not TF_AVAILABLE:
-    st.error("""
-TensorFlow is not installed.
-
-Current Python version does not have TensorFlow available.
-
-Install Python 3.11 (recommended), create a virtual environment,
-install TensorFlow, and run this app again.
-""")
-    st.stop()
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 
 
-@st.cache_resource
-def load_resources():
-    model = load_model("lstm_model.h5")
-
-    with open("tokenizer.pkl", "rb") as f:
-        tokenizer = pickle.load(f)
-
-    with open("max_len.pkl", "rb") as f:
-        max_len = pickle.load(f)
-
-    return model, tokenizer, max_len
-
-
-model, tokenizer, max_len = load_resources()
-
-
-def predict_next_word(text):
-    sequence = tokenizer.texts_to_sequences([text])[0]
-    sequence = pad_sequences([sequence], maxlen=max_len - 1, padding="pre")
-
-    prediction = model.predict(sequence, verbose=0)
-    predicted_index = np.argmax(prediction)
-
-    for word, index in tokenizer.word_index.items():
-        if index == predicted_index:
-            return word
-
-    return "Unknown"
-
-
-st.write("Enter a sentence and the model will predict the next word.")
-
-user_input = st.text_input(
-    "Enter text:",
-    placeholder="Type a sentence here..."
+# Page Configuration
+st.set_page_config(
+    page_title="AI Next Word Predictor",
+    page_icon="🧠",
+    layout="centered"
 )
 
-if st.button("Predict Next Word"):
-    if user_input.strip():
-        word = predict_next_word(user_input)
-        st.success(f"Predicted Next Word: **{word}**")
-    else:
-        st.warning("Please enter some text.")
 
-st.markdown("---")
-st.caption("LSTM Next Word Prediction using Streamlit")
+# Title
+st.title("🧠 AI Next Word Prediction")
+st.subheader("LSTM Based Language Model")
+
+
+# Model Loading
+@st.cache_resource
+def load_resources():
+
+    model_path = "lstm_model.h5"
+    tokenizer_path = "tokenizer.pkl"
+    maxlen_path = "max_len.pkl"
+
+
+    if not os.path.exists(model_path):
+        st.error("Model file not found!")
+        st.stop()
+
+    model = load_model(model_path, compile=False)
+
+
+    with open(tokenizer_path,"rb") as f:
+        tokenizer = pickle.load(f)
+
+
+    with open(maxlen_path,"rb") as f:
+        max_len = pickle.load(f)
+
+
+    # Reverse mapping
+    index_word = {
+        index: word 
+        for word,index in tokenizer.word_index.items()
+    }
+
+
+    return model, tokenizer, max_len, index_word
+
+
+
+model, tokenizer, max_len, index_word = load_resources()
+
+
+
+# Prediction Function
+def predict_next_word(text):
+
+    sequence = tokenizer.texts_to_sequences(
+        [text]
+    )[0]
+
+
+    padded = pad_sequences(
+        [sequence],
+        maxlen=max_len-1,
+        padding="pre"
+    )
+
+
+    prediction = model.predict(
+        padded,
+        verbose=0
+    )
+
+
+    predicted_index = np.argmax(prediction)
+
+
+    return index_word.get(
+        predicted_index,
+        "Unknown"
+    )
+
+
+
+# Input UI
+
+user_text = st.text_input(
+    "Enter your sentence:",
+    placeholder="Example: Machine learning is"
+)
+
+
+
+if st.button("🚀 Predict"):
+
+    if user_text.strip():
+
+        result = predict_next_word(user_text)
+
+
+        st.success(
+            f"Next Word Prediction: **{result}**"
+        )
+
+    else:
+        st.warning(
+            "Please enter text first."
+        )
+
+
+
+# Sidebar
+
+with st.sidebar:
+
+    st.header("Model Information")
+
+    st.write(
+        """
+        🧠 Model: LSTM Neural Network
+
+        📚 Task:
+        Next Word Prediction
+
+        ⚡ Framework:
+        TensorFlow + Keras
+
+        🎨 Interface:
+        Streamlit
+        """
+    )
+
+
+
+st.divider()
+
+st.caption(
+    "Built using Deep Learning (LSTM) and NLP"
+)
